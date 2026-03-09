@@ -5,10 +5,11 @@ import br.com.arquivototal.gedtotalcustody.domain.event.CustodyFailureEvent;
 import br.com.arquivototal.gedtotalcustody.domain.event.CustodyResultEvent;
 import br.com.arquivototal.gedtotalcustody.domain.enumeration.CustodyStepType;
 import br.com.arquivototal.gedtotalcustody.domain.enumeration.ProcessingStatus;
+import br.com.arquivototal.gedtotalcustody.application.service.support.HashUtils;
 import br.com.arquivototal.gedtotalcustody.infrastructure.http.CustodyDocumentPayload;
 import br.com.arquivototal.gedtotalcustody.infrastructure.http.GedtotalApiClient;
 import br.com.arquivototal.gedtotalcustody.infrastructure.kafka.CustodyEventPublisher;
-import java.security.MessageDigest;
+import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +22,8 @@ public class CustodyJobService {
 
     private final GedtotalApiClient gedtotalApiClient;
     private final CustodyEventPublisher custodyEventPublisher;
+    private final MerkleTreeService merkleTreeService;
+    private final BlockchainAnchorService blockchainAnchorService;
 
     public void handle(CustodyCommandEvent event) {
         log.info(
@@ -35,7 +38,10 @@ public class CustodyJobService {
                 "/api/internal/custodia/documentos/%d/payload".formatted(event.arquivoId())
             );
             byte[] content = gedtotalApiClient.fetchDocumentContent(payload.downloadUrl());
-            String hashCalculado = sha256Hex(content);
+            String hashCalculado = HashUtils.sha256Hex(content);
+            String leafHash = event.hashFinalDocumento() != null && !event.hashFinalDocumento().isBlank() ? event.hashFinalDocumento() : hashCalculado;
+            String rootHash = merkleTreeService.buildRoot(List.of(leafHash));
+            AnchorResult anchorResult = blockchainAnchorService.anchor(rootHash);
 
             log.info(
                 "Payload de custodia obtido jobId={} arquivoId={} formularioId={} nomeArquivo={} bytes={}",
@@ -59,10 +65,10 @@ public class CustodyJobService {
                     event.projetoId(),
                     event.formularioId(),
                     ProcessingStatus.CONCLUIDO,
-                    hashCalculado,
-                    null,
-                    null,
-                    null,
+                    rootHash,
+                    anchorResult.txHash(),
+                    anchorResult.network(),
+                    anchorResult.contractAddress(),
                     Map.of(
                         "message",
                         "Etapa de custodia processada pelo worker",
@@ -72,6 +78,12 @@ public class CustodyJobService {
                         content.length,
                         "hashPayload",
                         payload.hashAtual(),
+                        "leafHash",
+                        leafHash,
+                        "hashCalculado",
+                        hashCalculado,
+                        "anchoringSimulated",
+                        anchorResult.simulated(),
                         "hashComando",
                         event.hashFinalDocumento()
                     ),
@@ -104,20 +116,6 @@ public class CustodyJobService {
                     event.traceId()
                 )
             );
-        }
-    }
-
-    private String sha256Hex(byte[] content) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(content);
-            StringBuilder builder = new StringBuilder(hash.length * 2);
-            for (byte value : hash) {
-                builder.append(String.format("%02x", value));
-            }
-            return builder.toString();
-        } catch (Exception ex) {
-            throw new IllegalStateException("Nao foi possivel calcular SHA-256", ex);
         }
     }
 }

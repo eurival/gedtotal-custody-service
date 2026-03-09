@@ -30,6 +30,15 @@ app:
     oauth2-enabled: false
   internal-api:
     gedtotalapi-base-url: http://localhost:8080
+  blockchain:
+    enabled: false
+    network: polygon
+    rpc-url:
+    chain-id: 137
+    private-key:
+    anchor-address:
+    gas-price-wei: 3000000000
+    gas-limit: 150000
   kafka:
     topics:
       custody-request: custodia.anchor.request
