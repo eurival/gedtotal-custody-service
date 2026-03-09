@@ -3,9 +3,13 @@ package br.com.arquivototal.gedtotalcustody.application.service;
 import br.com.arquivototal.gedtotalcustody.application.service.support.HashUtils;
 import br.com.arquivototal.gedtotalcustody.config.BlockchainProperties;
 import java.math.BigInteger;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.web3j.abi.FunctionEncoder;
+import org.web3j.abi.datatypes.Function;
+import org.web3j.abi.datatypes.generated.Bytes32;
 import org.web3j.crypto.Credentials;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.methods.response.EthSendTransaction;
@@ -38,11 +42,16 @@ public class BlockchainAnchorService {
                 credentials,
                 blockchainProperties.chainId() != null ? blockchainProperties.chainId() : -1L
             );
+            String methodName = blockchainProperties.methodName() != null && !blockchainProperties.methodName().isBlank()
+                ? blockchainProperties.methodName()
+                : "anchorMerkleRoot";
+            Function function = new Function(methodName, List.of(new Bytes32(Numeric.hexStringToByteArray(Numeric.prependHexPrefix(merkleRoot)))), List.of());
+            String encodedFunction = FunctionEncoder.encode(function);
             EthSendTransaction response = transactionManager.sendTransaction(
                 blockchainProperties.gasPriceWei() != null ? blockchainProperties.gasPriceWei() : BigInteger.valueOf(3_000_000_000L),
                 blockchainProperties.gasLimit() != null ? blockchainProperties.gasLimit() : BigInteger.valueOf(150_000L),
                 blockchainProperties.anchorAddress(),
-                Numeric.prependHexPrefix(merkleRoot),
+                encodedFunction,
                 BigInteger.ZERO
             );
 

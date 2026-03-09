@@ -37,6 +37,7 @@ app:
     chain-id: 137
     private-key:
     anchor-address:
+    method-name: anchorMerkleRoot
     gas-price-wei: 3000000000
     gas-limit: 150000
   kafka:

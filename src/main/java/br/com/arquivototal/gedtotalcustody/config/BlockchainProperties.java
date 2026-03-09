@@ -11,6 +11,7 @@ public record BlockchainProperties(
     Long chainId,
     String privateKey,
     String anchorAddress,
+    String methodName,
     BigInteger gasPriceWei,
     BigInteger gasLimit
 ) {}

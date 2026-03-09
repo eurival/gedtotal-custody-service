@@ -4,6 +4,7 @@ public record CustodyCommandEvent(
     String jobId,
     Long custodiaDocumentoId,
     Long arquivoId,
+    Long sourceArquivoId,
     Long masterDadosIndexacaoId,
     Long tenantRootId,
     Long clienteId,

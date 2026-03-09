@@ -4,6 +4,7 @@ import java.util.Map;
 
 public record CustodyDocumentPayload(
     Long arquivoId,
+    Long sourceArquivoId,
     Long masterDadosIndexacaoId,
     Long tenantRootId,
     Long clienteId,

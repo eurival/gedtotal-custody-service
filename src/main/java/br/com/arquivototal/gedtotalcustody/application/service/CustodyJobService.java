@@ -35,7 +35,9 @@ public class CustodyJobService {
 
         try {
             CustodyDocumentPayload payload = gedtotalApiClient.fetchPayload(
-                "/api/internal/custodia/documentos/%d/payload".formatted(event.arquivoId())
+                event.sourceArquivoId() != null
+                    ? "/api/internal/custodia/documentos/%d/payload?sourceArquivoId=%d".formatted(event.arquivoId(), event.sourceArquivoId())
+                    : "/api/internal/custodia/documentos/%d/payload".formatted(event.arquivoId())
             );
             byte[] content = gedtotalApiClient.fetchDocumentContent(payload.downloadUrl());
             String hashCalculado = HashUtils.sha256Hex(content);
