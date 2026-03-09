@@ -8,6 +8,7 @@ import br.com.arquivototal.gedtotalcustody.domain.enumeration.ProcessingStatus;
 import br.com.arquivototal.gedtotalcustody.infrastructure.http.CustodyDocumentPayload;
 import br.com.arquivototal.gedtotalcustody.infrastructure.http.GedtotalApiClient;
 import br.com.arquivototal.gedtotalcustody.infrastructure.kafka.CustodyEventPublisher;
+import java.security.MessageDigest;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,15 +31,19 @@ public class CustodyJobService {
         );
 
         try {
-            String payloadUrl = "/api/internal/custodia/documentos/%d/payload".formatted(event.arquivoId());
-            CustodyDocumentPayload payload = gedtotalApiClient.fetchPayload(payloadUrl);
+            CustodyDocumentPayload payload = gedtotalApiClient.fetchPayload(
+                "/api/internal/custodia/documentos/%d/payload".formatted(event.arquivoId())
+            );
+            byte[] content = gedtotalApiClient.fetchDocumentContent(payload.downloadUrl());
+            String hashCalculado = sha256Hex(content);
 
             log.info(
-                "Payload de custodia obtido jobId={} arquivoId={} formularioId={} nomeArquivo={}",
+                "Payload de custodia obtido jobId={} arquivoId={} formularioId={} nomeArquivo={} bytes={}",
                 event.jobId(),
                 payload.arquivoId(),
                 payload.formularioId(),
-                payload.nomeArquivo()
+                payload.nomeArquivo(),
+                content.length
             );
 
             custodyEventPublisher.publishResult(
@@ -53,12 +58,23 @@ public class CustodyJobService {
                     event.departamentoId(),
                     event.projetoId(),
                     event.formularioId(),
-                    ProcessingStatus.RECEBIDO,
-                    event.hashFinalDocumento(),
+                    ProcessingStatus.CONCLUIDO,
+                    hashCalculado,
                     null,
                     null,
                     null,
-                    Map.of("message", "Etapa de custodia recebida e pronta para implementacao", "nomeArquivo", payload.nomeArquivo()),
+                    Map.of(
+                        "message",
+                        "Etapa de custodia processada pelo worker",
+                        "nomeArquivo",
+                        payload.nomeArquivo(),
+                        "bytes",
+                        content.length,
+                        "hashPayload",
+                        payload.hashAtual(),
+                        "hashComando",
+                        event.hashFinalDocumento()
+                    ),
                     event.traceId()
                 )
             );
@@ -88,6 +104,20 @@ public class CustodyJobService {
                     event.traceId()
                 )
             );
+        }
+    }
+
+    private String sha256Hex(byte[] content) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(content);
+            StringBuilder builder = new StringBuilder(hash.length * 2);
+            for (byte value : hash) {
+                builder.append(String.format("%02x", value));
+            }
+            return builder.toString();
+        } catch (Exception ex) {
+            throw new IllegalStateException("Nao foi possivel calcular SHA-256", ex);
         }
     }
 }

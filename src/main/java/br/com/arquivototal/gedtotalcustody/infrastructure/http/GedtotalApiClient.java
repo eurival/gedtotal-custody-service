@@ -24,4 +24,15 @@ public class GedtotalApiClient {
             .retrieve()
             .body(CustodyDocumentPayload.class);
     }
+
+    public byte[] fetchDocumentContent(String contentUrl) {
+        log.info("Baixando conteudo do documento para custodia url={}", contentUrl);
+        return restClientBuilder
+            .baseUrl(internalApiProperties.gedtotalapiBaseUrl())
+            .build()
+            .get()
+            .uri(contentUrl)
+            .retrieve()
+            .body(byte[].class);
+    }
 }
