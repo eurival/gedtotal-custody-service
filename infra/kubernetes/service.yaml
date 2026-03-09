@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gedtotal-custody-service
+  namespace: gedtotalap-apps
+  labels:
+    app: gedtotal-custody-service
+spec:
+  selector:
+    app: gedtotal-custody-service
+  ports:
+    - name: http
+      port: 8092
+      targetPort: 8092
+  type: ClusterIP
