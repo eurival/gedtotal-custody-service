@@ -11,6 +11,7 @@ import org.springframework.web.client.RestClient;
 @RequiredArgsConstructor
 public class GedtotalApiClient {
 
+    private static final String INTERNAL_TOKEN_HEADER = "X-Internal-Token";
     private final RestClient.Builder restClientBuilder;
     private final InternalApiProperties internalApiProperties;
 
@@ -21,6 +22,7 @@ public class GedtotalApiClient {
             .build()
             .get()
             .uri(payloadUrl)
+            .header(INTERNAL_TOKEN_HEADER, internalTokenHeader())
             .retrieve()
             .body(CustodyDocumentPayload.class);
     }
@@ -32,7 +34,16 @@ public class GedtotalApiClient {
             .build()
             .get()
             .uri(contentUrl)
+            .header(INTERNAL_TOKEN_HEADER, internalTokenHeader())
             .retrieve()
             .body(byte[].class);
+    }
+
+    private String internalTokenHeader() {
+        String token = internalApiProperties.internalToken();
+        if (token == null || token.isBlank()) {
+            throw new IllegalStateException("app.internal-api.internal-token nao configurado");
+        }
+        return token;
     }
 }
