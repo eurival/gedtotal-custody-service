@@ -82,6 +82,8 @@ public class CustodyJobService {
                         payload.hashAtual(),
                         "leafHash",
                         leafHash,
+                        "hashMaterialCustodia",
+                        leafHash,
                         "hashCalculado",
                         hashCalculado,
                         "anchoringSimulated",
